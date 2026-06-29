@@ -34,14 +34,14 @@ _________________________________________________________________
                                                                  
  flatten (Flatten)           (None, 4608)              0         
                                                                  
- dense (Dense)               (None, 256)               1179904   
+ dense (Dense)               (None, 128)               589952    
                                                                  
- dropout_3 (Dropout)         (None, 256)               0         
+ dropout_3 (Dropout)         (None, 128)               0         
                                                                  
- dense_1 (Dense)             (None, 7)                 1799      
+ dense_1 (Dense)             (None, 7)                 903       
                                                                  
 =================================================================
-Total params: 1275271 (4.86 MB)
-Trainable params: 1274823 (4.86 MB)
+Total params: 684423 (2.61 MB)
+Trainable params: 683975 (2.61 MB)
 Non-trainable params: 448 (1.75 KB)
 _________________________________________________________________
