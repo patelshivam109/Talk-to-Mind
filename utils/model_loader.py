@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import joblib
 import librosa
+import cv2
 
 
 # ===============================
@@ -22,7 +23,7 @@ face_model_path = os.path.join(
     BASE_DIR,
     "models",
     "saved_models",
-    "facial_emotion_model.keras"
+    "facial_emotion_mobilenet.keras"
 )
 
 
@@ -79,124 +80,55 @@ speech_classes = [
 
 
 # ===============================
+# Face Detector
+# ===============================
+
+face_detector = cv2.CascadeClassifier(
+    cv2.data.haarcascades +
+    "haarcascade_frontalface_default.xml"
+)
+
+
+
+# ===============================
 # Facial Prediction
 # ===============================
 
 def predict_face(image):
 
-    image = image.convert("L")
+    img = np.array(image.convert("RGB"))
 
-    image = image.resize(
-        (48,48)
+    img = cv2.resize(
+        img,
+        (96,96)
     )
 
-    image = np.array(image)
+    img = img.astype("float32") / 255.0
 
-    image = image / 255.0
-
-
-    image = np.expand_dims(
-        image,
+    img = np.expand_dims(
+        img,
         axis=0
     )
 
-    image = np.expand_dims(
-        image,
-        axis=-1
-    )
 
-
-    prediction = face_model.predict(
-        image,
+    pred = face_model.predict(
+        img,
         verbose=0
     )
 
 
-    index = np.argmax(
-        prediction
+    idx = np.argmax(pred[0])
+
+    confidence = float(
+        pred[0][idx] * 100
     )
 
 
-    return face_classes[index]
-
-
-
-# ===============================
-# Speech Feature Extraction
-# ===============================
-
-def extract_features(audio):
-
-    y, sr = librosa.load(
-        audio,
-        duration=3
+    return (
+        face_classes[idx],
+        confidence
     )
 
-
-    mfcc = librosa.feature.mfcc(
-        y=y,
-        sr=sr,
-        n_mfcc=40
-    )
-
-
-    mfcc_mean = np.mean(
-        mfcc,
-        axis=1
-    )
-
-
-    mfcc_std = np.std(
-        mfcc,
-        axis=1
-    )
-
-
-    delta = librosa.feature.delta(
-        mfcc
-    )
-
-
-    delta_mean = np.mean(
-        delta,
-        axis=1
-    )
-
-
-    delta2 = librosa.feature.delta(
-        mfcc,
-        order=2
-    )
-
-
-    delta2_mean = np.mean(
-        delta2,
-        axis=1
-    )
-
-
-    features = np.hstack(
-        [
-            mfcc_mean,
-            mfcc_std,
-            delta_mean,
-            delta2_mean
-        ]
-    )
-
-
-    # SVM was trained on 189 features
-    if len(features) < 189:
-
-        features = np.pad(
-            features,
-            (0,189-len(features))
-        )
-
-
-    return features.reshape(
-        1,-1
-    )
 
 
 
