@@ -4,7 +4,7 @@ numpy
 matplotlib
 plotly
 opencv-python
-tensorflow==2.10.1
+tensorflow-cpu==2.15.1
 keras==2.10.0
 scikit-learn
 librosa
