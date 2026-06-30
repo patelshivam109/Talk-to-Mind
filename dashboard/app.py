@@ -3,37 +3,24 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+import datetime
 from PIL import Image
 
+sys.path.append(os.path.abspath("../"))
 
-sys.path.append(
-    os.path.abspath("../")
-)
-
-
-from utils.fusion import (
-    calculate_wellbeing,
-    generate_recommendation
-)
-
-from utils.model_loader import (
-    predict_face,
-    predict_speech
-)
-
+from utils.fusion import calculate_wellbeing, generate_recommendation
+from utils.model_loader import predict_face, predict_speech
 
 st.set_page_config(
     page_title="Talk To Mind",
     page_icon="◈",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
-
 
 # =========================================================
 #  GODMODE STYLE SYSTEM — "Neural Diagnostics Console"
 # =========================================================
-
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -274,7 +261,7 @@ html, body, [class*="css"]{
   font-weight: 600;
 }
 
-.stSelectbox label, .stSelectbox p{
+.stSelectbox label, .stSelectbox p, .stRadio label{
   font-family:'Inter', sans-serif !important;
   color: var(--text) !important;
   font-size: 14.5px !important;
@@ -366,14 +353,53 @@ hr, [data-testid="stDivider"]{ border-color: var(--panel-edge) !important; opaci
   font-size: 11px; color: var(--faint);
   letter-spacing: 1.5px;
 }
+
+/* Sidebar styling overrides */
+[data-testid="stSidebar"] {
+    background-color: var(--panel) !important;
+    border-right: 1px solid var(--panel-edge) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
 # =========================================================
+#  SESSION STATE INIT
+# =========================================================
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+if 'face_emotion' not in st.session_state:
+    st.session_state.face_emotion = None
+if 'face_conf' not in st.session_state:
+    st.session_state.face_conf = 0
+if 'speech_emotion' not in st.session_state:
+    st.session_state.speech_emotion = None
+if 'q_index' not in st.session_state:
+    st.session_state.q_index = 0
+if 'q_score' not in st.session_state:
+    st.session_state.q_score = 0
+if 'saved_to_history' not in st.session_state:
+    st.session_state.saved_to_history = False
+
+
+# =========================================================
+#  SIDEBAR
+# =========================================================
+with st.sidebar:
+    st.markdown('<div class="tm-mast-title" style="font-size:22px; margin-bottom: 20px;">◈ Navigation</div>', unsafe_allow_html=True)
+    page = st.radio("Select View:", ["Assessment", "Dashboard"])
+    
+    st.markdown("<hr>", unsafe_allow_html=True)
+    if st.button("Restart Assessment"):
+        for key in ['step', 'face_emotion', 'face_conf', 'speech_emotion', 'q_index', 'q_score', 'saved_to_history', 'final_result']:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+
+
+# =========================================================
 #  MASTHEAD
 # =========================================================
-
 st.markdown("""
 <div class="tm-mast">
   <div>
@@ -385,8 +411,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
-# animated neural pulse waveform — signature element
 st.markdown("""
 <div class="tm-pulse-wrap">
   <svg class="tm-pulse-svg" viewBox="0 0 1200 70" width="100%" height="70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -406,356 +430,269 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# =========================
-# Facial Emotion
-# =========================
 
-st.markdown("""
-<div class="tm-module">
-  <div class="tm-module-head">
-    <span class="tm-module-tag">01</span>
-    <span class="tm-module-title">Facial Emotion Detection</span>
-    <span class="tm-module-desc">VISUAL CHANNEL<br>camera or static frame</span>
-  </div>
-""", unsafe_allow_html=True)
-
-
-face_tab_camera, face_tab_upload = st.tabs(
-    ["📷 Live Camera", "🖼️ Upload Image"]
-)
-
-face_image = None
-
-with face_tab_camera:
-    camera = st.camera_input(
-        "Take a picture",
-        key="face_capture"
-    )
-    if camera:
-        face_image = Image.open(camera)
-
-with face_tab_upload:
-    uploaded_img = st.file_uploader(
-        "Upload a face image",
-        type=["jpg", "jpeg", "png", "bmp", "webp"],
-        key="face_upload"
-    )
-    if uploaded_img:
-        face_image = Image.open(uploaded_img)
-
-
-if face_image:
-
-    try:
-
-        face_emotion, face_conf = predict_face(face_image)
-
-        st.markdown(f"""
-        <div class="tm-readout">
-          <span class="tm-readout-dot"></span>
-          FACE EMOTION DETECTED · <b>{face_emotion.upper()}</b>
-        </div>
+# =========================================================
+#  ASSESSMENT FLOW
+# =========================================================
+if page == "Assessment":
+    
+    # ---------------------------
+    # STEP 1: FACIAL EMOTION
+    # ---------------------------
+    if st.session_state.step == 1:
+        st.markdown("""
+        <div class="tm-module">
+          <div class="tm-module-head">
+            <span class="tm-module-tag">STEP 01 / 03</span>
+            <span class="tm-module-title">Facial Emotion Detection</span>
+            <span class="tm-module-desc">VISUAL CHANNEL</span>
+          </div>
         """, unsafe_allow_html=True)
 
-        st.metric(
-            "Confidence",
-            f"{face_conf:.2f}%"
-        )
-
-        st.image(
-            face_image,
-            caption="Analysed Face",
-            width=300
-        )
-
-    except Exception as e:
-
-        st.error(
-            f"Face detection failed: {e}"
-        )
-
-        face_emotion = "neutral"
-        face_conf = 0
-
-else:
-
-    face_emotion = "neutral"
-    face_conf = 0
-
-st.markdown("</div>", unsafe_allow_html=True)  # close module 01
-
-
-# =========================
-# Speech Emotion
-# =========================
-
-st.markdown("""
-<div class="tm-module">
-  <div class="tm-module-head">
-    <span class="tm-module-tag">02</span>
-    <span class="tm-module-title">Speech Emotion Detection</span>
-    <span class="tm-module-desc">AUDIO CHANNEL<br>any common format, auto-converted</span>
-  </div>
-""", unsafe_allow_html=True)
-
-
-SUPPORTED_AUDIO_TYPES = [
-    "wav", "mp3", "ogg", "flac",
-    "m4a", "aac", "wma", "aiff",
-    "opus", "webm"
-]
-
-audio = st.file_uploader(
-    "Upload voice sample (wav, mp3, ogg, flac, m4a, aac, …)",
-    type=SUPPORTED_AUDIO_TYPES
-)
-
-
-def _to_wav_bytes(uploaded_file):
-    """Convert any uploaded audio format to WAV bytes using ffmpeg directly."""
-    import tempfile
-    import subprocess
-    import imageio_ffmpeg
-    import shutil
-
-    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-
-    # Get extension
-    name = uploaded_file.name.lower()
-    ext = name.rsplit(".", 1)[-1] if "." in name else "tmp"
-
-    # Create temp files
-    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f_in:
-        in_path = f_in.name
-        f_in.write(uploaded_file.read())
-
-    out_path = in_path + ".wav"
-
-    try:
-        # Run ffmpeg to convert to WAV
-        subprocess.run(
-            [ffmpeg_exe, "-y", "-i", in_path, out_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True
-        )
-
-        # Read WAV bytes
-        with open(out_path, "rb") as f_out:
-            wav_data = f_out.read()
-
-        return io.BytesIO(wav_data)
-
-    finally:
-        # Cleanup temp files
-        if os.path.exists(in_path):
-            os.remove(in_path)
-        if os.path.exists(out_path):
-            os.remove(out_path)
-
-
-if audio:
-
-    try:
-        wav_bytes = _to_wav_bytes(audio)
-
-        speech_emotion = predict_speech(
-            wav_bytes
-        )
-
-        st.markdown(f"""
-        <div class="tm-readout">
-          <span class="tm-readout-dot"></span>
-          SPEECH EMOTION DETECTED · <b>{speech_emotion.upper()}</b>
-        </div>
-        """, unsafe_allow_html=True)
-
-    except Exception as e:
-
-        speech_emotion = "neutral"
-
-        st.warning(
-            f"Speech model error: {e}"
-        )
-
-else:
-
-    speech_emotion = "neutral"
-
-st.markdown("</div>", unsafe_allow_html=True)  # close module 02
-
-
-# =========================
-# Questionnaire
-# =========================
-
-st.markdown("""
-<div class="tm-module">
-  <div class="tm-module-head">
-    <span class="tm-module-tag">03</span>
-    <span class="tm-module-title">Self Assessment</span>
-    <span class="tm-module-desc">SUBJECTIVE CHANNEL<br>weighted questionnaire</span>
-  </div>
-""", unsafe_allow_html=True)
-
-
-questions = pd.read_csv(
-    "../datasets/questionnaire/mental_health_questions.csv"
-)
-
-
-score = 0
-
-
-options = {
-    "Never": 0,
-    "Rarely": 1,
-    "Sometimes": 2,
-    "Often": 3,
-    "Always": 4
-}
-
-
-for _, row in questions.iterrows():
-
-    answer = st.selectbox(
-        row["Question"],
-        list(options.keys()),
-        key=int(row["QuestionID"])
-    )
-
-    value = options[answer]
-
-    if str(row["ReverseScore"]) == "Yes":
-        value = 4 - value
-
-    score += value
-
-st.markdown("</div>", unsafe_allow_html=True)  # close module 03
-
-
-# =========================
-# Final Analysis
-# =========================
-
-st.markdown('<div style="margin: 30px 0 18px 0;">', unsafe_allow_html=True)
-
-if st.button(
-    "⚡ Generate Result"
-):
-
-    result = calculate_wellbeing(
-        face_emotion,
-        speech_emotion,
-        score
-    )
-
-    risk = str(result["risk_level"]).lower()
-    is_high_risk = any(w in risk for w in ["high", "severe", "elevated"])
-
-    # =========================
-    # Tracking Over Time
-    # =========================
-    import datetime
-    
-    history_file = "../datasets/history.csv"
-    os.makedirs(os.path.dirname(history_file), exist_ok=True)
-    
-    new_record = pd.DataFrame([{
-        "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Wellbeing_Score": result["wellbeing_score"],
-        "Risk_Level": result["risk_level"]
-    }])
-    
-    if os.path.exists(history_file):
-        history_df = pd.read_csv(history_file)
-        history_df = pd.concat([history_df, new_record], ignore_index=True)
-    else:
-        history_df = new_record
+        face_tab_camera, face_tab_upload = st.tabs(["📷 Live Camera", "🖼️ Upload Image"])
+        face_image = None
         
-    history_df.to_csv(history_file, index=False)
+        with face_tab_camera:
+            camera = st.camera_input("Take a picture", key="face_capture")
+            if camera:
+                face_image = Image.open(camera)
+
+        with face_tab_upload:
+            uploaded_img = st.file_uploader("Upload a face image", type=["jpg", "jpeg", "png", "bmp", "webp"], key="face_upload")
+            if uploaded_img:
+                face_image = Image.open(uploaded_img)
+
+        if face_image:
+            try:
+                with st.spinner("Analyzing facial features..."):
+                    face_emotion, face_conf = predict_face(face_image)
+                    st.session_state.face_emotion = face_emotion
+                    st.session_state.face_conf = face_conf
+                
+                st.markdown(f"""
+                <div class="tm-readout">
+                  <span class="tm-readout-dot"></span>
+                  FACE EMOTION DETECTED · <b>{face_emotion.upper()}</b>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.image(face_image, caption="Analysed Face", width=300)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Proceed to Speech Detection ➔"):
+                    st.session_state.step = 2
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Face detection failed: {e}")
+        else:
+            st.info("Capture or upload a face image to begin.")
+            
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
-    st.markdown(f"""
-    <div class="tm-readout {'tm-readout-warn' if is_high_risk else ''}" style="margin-top:18px;">
-      <span class="tm-readout-dot"></span>
-      ANALYSIS COMPLETE · FUSED READOUT GENERATED
-    </div>
-    """, unsafe_allow_html=True)
+    # ---------------------------
+    # STEP 2: SPEECH EMOTION
+    # ---------------------------
+    elif st.session_state.step == 2:
+        st.markdown("""
+        <div class="tm-module">
+          <div class="tm-module-head">
+            <span class="tm-module-tag">STEP 02 / 03</span>
+            <span class="tm-module-title">Speech Emotion Detection</span>
+            <span class="tm-module-desc">AUDIO CHANNEL</span>
+          </div>
+        """, unsafe_allow_html=True)
 
+        audio = st.file_uploader(
+            "Upload voice sample (wav, mp3, ogg, flac, m4a, aac, …)",
+            type=["wav", "mp3", "ogg", "flac", "m4a", "aac", "wma", "aiff", "opus", "webm"]
+        )
+
+        def _to_wav_bytes(uploaded_file):
+            import tempfile, subprocess, imageio_ffmpeg, shutil
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            name = uploaded_file.name.lower()
+            ext = name.rsplit(".", 1)[-1] if "." in name else "tmp"
+            with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f_in:
+                in_path = f_in.name
+                f_in.write(uploaded_file.read())
+            out_path = in_path + ".wav"
+            try:
+                subprocess.run([ffmpeg_exe, "-y", "-i", in_path, out_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                with open(out_path, "rb") as f_out:
+                    return io.BytesIO(f_out.read())
+            finally:
+                if os.path.exists(in_path): os.remove(in_path)
+                if os.path.exists(out_path): os.remove(out_path)
+
+        if audio:
+            try:
+                with st.spinner("Analyzing acoustic features..."):
+                    wav_bytes = _to_wav_bytes(audio)
+                    speech_emotion = predict_speech(wav_bytes)
+                    st.session_state.speech_emotion = speech_emotion
+                
+                st.markdown(f"""
+                <div class="tm-readout">
+                  <span class="tm-readout-dot"></span>
+                  SPEECH EMOTION DETECTED · <b>{speech_emotion.upper()}</b>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Proceed to Self Assessment ➔"):
+                    st.session_state.step = 3
+                    st.rerun()
+            except Exception as e:
+                st.warning(f"Speech model error: {e}")
+        else:
+            st.info("Upload an audio sample to continue.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------
+    # STEP 3: QUESTIONNAIRE
+    # ---------------------------
+    elif st.session_state.step == 3:
+        st.markdown("""
+        <div class="tm-module">
+          <div class="tm-module-head">
+            <span class="tm-module-tag">STEP 03 / 03</span>
+            <span class="tm-module-title">Self Assessment</span>
+            <span class="tm-module-desc">SUBJECTIVE CHANNEL</span>
+          </div>
+        """, unsafe_allow_html=True)
+        
+        questions = pd.read_csv("../datasets/questionnaire/mental_health_questions.csv")
+        total_questions = len(questions)
+        
+        options = {"Never": 0, "Rarely": 1, "Sometimes": 2, "Often": 3, "Always": 4}
+        q_idx = st.session_state.q_index
+        
+        if q_idx < total_questions:
+            row = questions.iloc[q_idx]
+            
+            st.markdown(f"**Question {q_idx + 1} of {total_questions}**")
+            st.markdown(f"<h3 style='color: white;'>{row['Question']}</h3>", unsafe_allow_html=True)
+            answer = st.radio("Select an option:", list(options.keys()), key=f"q_{q_idx}")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Next ➔"):
+                val = options[answer]
+                if str(row["ReverseScore"]) == "Yes":
+                    val = 4 - val
+                st.session_state.q_score += val
+                st.session_state.q_index += 1
+                
+                if st.session_state.q_index >= total_questions:
+                    st.session_state.step = 4
+                st.rerun()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ---------------------------
+    # STEP 4: RESULTS
+    # ---------------------------
+    elif st.session_state.step == 4:
+        
+        # Calculate result once
+        if not st.session_state.saved_to_history:
+            face_emo = st.session_state.face_emotion or "neutral"
+            speech_emo = st.session_state.speech_emotion or "neutral"
+            
+            result = calculate_wellbeing(face_emo, speech_emo, st.session_state.q_score)
+            st.session_state.final_result = result
+            
+            # Save history to CSV
+            history_file = "../datasets/history.csv"
+            os.makedirs(os.path.dirname(history_file), exist_ok=True)
+            new_record = pd.DataFrame([{
+                "Date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Wellbeing_Score": result["wellbeing_score"],
+                "Risk_Level": result["risk_level"]
+            }])
+            
+            if os.path.exists(history_file):
+                history_df = pd.read_csv(history_file)
+                history_df = pd.concat([history_df, new_record], ignore_index=True)
+            else:
+                history_df = new_record
+            history_df.to_csv(history_file, index=False)
+            
+            st.session_state.saved_to_history = True
+
+        result = st.session_state.final_result
+        risk = str(result["risk_level"]).lower()
+        is_high_risk = any(w in risk for w in ["high", "severe", "elevated"])
+
+        st.markdown(f"""
+        <div class="tm-readout {'tm-readout-warn' if is_high_risk else ''}">
+          <span class="tm-readout-dot"></span>
+          ANALYSIS COMPLETE · FUSED READOUT GENERATED
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="tm-module" style="animation-delay:.05s;">
+          <div class="tm-module-head">
+            <span class="tm-module-tag">◈</span>
+            <span class="tm-module-title">Fused Readout</span>
+            <span class="tm-module-desc">FACE + VOICE + SELF-REPORT</span>
+          </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Wellbeing Score", result["wellbeing_score"])
+        with col2:
+            st.metric("Risk Level", result["risk_level"])
+        with col3:
+            st.metric("Questionnaire Score", st.session_state.q_score)
+
+        st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">EMOTION SUMMARY</div>', unsafe_allow_html=True)
+
+        st.write(f"🙂 Facial Emotion: **{st.session_state.face_emotion}**")
+        st.write(f"🎤 Speech Emotion: **{st.session_state.speech_emotion}**")
+
+        st.markdown('<div style="height:14px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">RECOMMENDATIONS</div>', unsafe_allow_html=True)
+
+        recommendations = generate_recommendation(result["risk_level"])
+        for item in recommendations:
+            st.markdown(f"""<div class="tm-rec"><span class="tm-rec-mark">▸</span><span>{item}</span></div>""", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        st.success("Your results have been automatically saved to the Dashboard.")
+
+
+# =========================================================
+#  DASHBOARD (HISTORY)
+# =========================================================
+elif page == "Dashboard":
     st.markdown("""
-    <div class="tm-module" style="animation-delay:.05s;">
+    <div class="tm-module">
       <div class="tm-module-head">
-        <span class="tm-module-tag">◈</span>
-        <span class="tm-module-title">Fused Readout</span>
-        <span class="tm-module-desc">FACE + VOICE + SELF-REPORT</span>
+        <span class="tm-module-tag">HISTORY</span>
+        <span class="tm-module-title">Mental Wellness Progress</span>
+        <span class="tm-module-desc">HISTORICAL TRACKING OVER TIME</span>
       </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "Wellbeing Score",
-            result["wellbeing_score"]
-        )
-
-    with col2:
-        st.metric(
-            "Risk Level",
-            result["risk_level"]
-        )
-
-    with col3:
-        st.metric(
-            "Questionnaire Score",
-            score
-        )
-
-    st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">EMOTION SUMMARY</div>', unsafe_allow_html=True)
-
-    st.write(f"🙂 Facial Emotion: **{face_emotion}**")
-    st.write(f"🎤 Speech Emotion: **{speech_emotion}**")
-
-    st.markdown('<div style="height:14px;"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">RECOMMENDATIONS</div>', unsafe_allow_html=True)
-
-    recommendations = generate_recommendation(
-        result["risk_level"]
-    )
-
-    for item in recommendations:
-        st.markdown(f"""
-        <div class="tm-rec"><span class="tm-rec-mark">▸</span><span>{item}</span></div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)  # close fused readout module
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# =========================
-# Mental Wellness Progress
-# =========================
-st.markdown("""
-<div class="tm-module">
-  <div class="tm-module-head">
-    <span class="tm-module-tag">04</span>
-    <span class="tm-module-title">Mental Wellness Progress</span>
-    <span class="tm-module-desc">HISTORICAL TRACKING</span>
-  </div>
-""", unsafe_allow_html=True)
-
-history_file = "../datasets/history.csv"
-if os.path.exists(history_file):
-    history_df = pd.read_csv(history_file)
-    if len(history_df) > 0:
-        st.line_chart(history_df.set_index("Date")["Wellbeing_Score"])
+    history_file = "../datasets/history.csv"
+    if os.path.exists(history_file):
+        history_df = pd.read_csv(history_file)
+        if len(history_df) > 0:
+            st.line_chart(history_df.set_index("Date")["Wellbeing_Score"])
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">PREVIOUS ASSESSMENTS</div>', unsafe_allow_html=True)
+            st.dataframe(history_df, use_container_width=True)
+        else:
+            st.info("Take the assessment to start tracking your progress!")
     else:
-        st.info("Take the assessment to start tracking your progress!")
-else:
-    st.info("Take the assessment to start tracking your progress over time!")
+        st.info("Take the assessment to start tracking your progress over time!")
 
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="tm-footer">TALK TO MIND · MULTIMODAL EMOTION FUSION SYSTEM</div>', unsafe_allow_html=True)
