@@ -448,7 +448,7 @@ if page == "Assessment":
           </div>
         """, unsafe_allow_html=True)
 
-        face_tab_camera, face_tab_upload = st.tabs(["📷 Live Camera", "🖼️ Upload Image"])
+        face_tab_camera, face_tab_upload = st.tabs([" Live Camera", " Upload Image"])
         face_image = None
         
         with face_tab_camera:
@@ -662,8 +662,8 @@ if page == "Assessment":
         st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">EMOTION SUMMARY</div>', unsafe_allow_html=True)
 
-        st.write(f"🙂 Facial Emotion: **{st.session_state.face_emotion}**")
-        st.write(f"🎤 Speech Emotion: **{st.session_state.speech_emotion}**")
+        st.write(f" Facial Emotion: **{st.session_state.face_emotion}**")
+        st.write(f" Speech Emotion: **{st.session_state.speech_emotion}**")
 
         st.markdown('<div style="height:14px;"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tm-module-desc" style="text-align:left; margin-bottom:10px;">RECOMMENDATIONS</div>', unsafe_allow_html=True)
@@ -719,7 +719,7 @@ elif page == "System Architecture":
       </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🧠 Models Used")
+    st.markdown("###  Models Used")
     st.markdown("""
     - **Facial Emotion Model**: Convolutional Neural Network (CNN) architecture designed for robust real-time face detection and emotion classification.
     - **Speech Emotion Model**: Support Vector Machine (SVM) classifier trained on extracted acoustic features including Mel-frequency cepstral coefficients (MFCCs).
