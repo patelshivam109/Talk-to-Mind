@@ -503,10 +503,21 @@ if page == "Assessment":
           </div>
         """, unsafe_allow_html=True)
 
-        audio = st.file_uploader(
-            "Upload voice sample (wav, mp3, ogg, flac, m4a, aac, …)",
-            type=["wav", "mp3", "ogg", "flac", "m4a", "aac", "wma", "aiff", "opus", "webm"]
-        )
+        speech_tab_record, speech_tab_upload = st.tabs(["🎤 Record Audio", "📁 Upload Audio"])
+        audio = None
+        
+        with speech_tab_record:
+            recorded_audio = st.audio_input("Record voice sample")
+            if recorded_audio:
+                audio = recorded_audio
+
+        with speech_tab_upload:
+            uploaded_audio = st.file_uploader(
+                "Upload voice sample (wav, mp3, ogg, flac, m4a, aac, …)",
+                type=["wav", "mp3", "ogg", "flac", "m4a", "aac", "wma", "aiff", "opus", "webm"]
+            )
+            if uploaded_audio:
+                audio = uploaded_audio
 
         def _to_wav_bytes(uploaded_file):
             import tempfile, subprocess, imageio_ffmpeg, shutil
