@@ -115,13 +115,13 @@ audio = st.file_uploader(
 
 if audio:
 
+    audio_bytes = audio.read()
 
     try:
 
         speech_emotion = predict_speech(
-            audio
+            audio_bytes
         )
-
 
         st.success(
             f"Detected Speech Emotion: {speech_emotion}"
