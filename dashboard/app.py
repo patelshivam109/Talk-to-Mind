@@ -1,3 +1,4 @@
+import io
 import streamlit as st
 import pandas as pd
 import sys
@@ -46,20 +47,35 @@ st.divider()
 st.header("1. Facial Emotion Detection")
 
 
-camera = st.camera_input(
-    "Take a picture",
-    key="face_capture"
+face_tab_camera, face_tab_upload = st.tabs(
+    ["📷 Live Camera", "🖼️ Upload Image"]
 )
 
+face_image = None
 
-if camera:
+with face_tab_camera:
+    camera = st.camera_input(
+        "Take a picture",
+        key="face_capture"
+    )
+    if camera:
+        face_image = Image.open(camera)
 
-    img = Image.open(camera)
+with face_tab_upload:
+    uploaded_img = st.file_uploader(
+        "Upload a face image",
+        type=["jpg", "jpeg", "png", "bmp", "webp"],
+        key="face_upload"
+    )
+    if uploaded_img:
+        face_image = Image.open(uploaded_img)
 
+
+if face_image:
 
     try:
 
-        face_emotion, face_conf = predict_face(img)
+        face_emotion, face_conf = predict_face(face_image)
 
 
         st.success(
@@ -73,10 +89,9 @@ if camera:
         )
 
 
-        # optional display captured image
         st.image(
-            img,
-            caption="Captured Face",
+            face_image,
+            caption="Analysed Face",
             width=300
         )
 
@@ -106,21 +121,69 @@ st.header(
 )
 
 
+SUPPORTED_AUDIO_TYPES = [
+    "wav", "mp3", "ogg", "flac",
+    "m4a", "aac", "wma", "aiff",
+    "opus", "webm"
+]
+
 audio = st.file_uploader(
-    "Upload voice sample",
-    type=["wav"]
+    "Upload voice sample (wav, mp3, ogg, flac, m4a, aac, …)",
+    type=SUPPORTED_AUDIO_TYPES
 )
+
+
+def _to_wav_bytes(uploaded_file):
+    """Convert any uploaded audio format to WAV bytes using ffmpeg directly."""
+    import tempfile
+    import subprocess
+    import imageio_ffmpeg
+    import shutil
+    
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    # Get extension
+    name = uploaded_file.name.lower()
+    ext = name.rsplit(".", 1)[-1] if "." in name else "tmp"
+    
+    # Create temp files
+    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f_in:
+        in_path = f_in.name
+        f_in.write(uploaded_file.read())
+        
+    out_path = in_path + ".wav"
+    
+    try:
+        # Run ffmpeg to convert to WAV
+        subprocess.run(
+            [ffmpeg_exe, "-y", "-i", in_path, out_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+        
+        # Read WAV bytes
+        with open(out_path, "rb") as f_out:
+            wav_data = f_out.read()
+            
+        return io.BytesIO(wav_data)
+        
+    finally:
+        # Cleanup temp files
+        if os.path.exists(in_path):
+            os.remove(in_path)
+        if os.path.exists(out_path):
+            os.remove(out_path)
 
 
 
 if audio:
 
-    audio_bytes = audio.read()
-
     try:
+        wav_bytes = _to_wav_bytes(audio)
 
         speech_emotion = predict_speech(
-            audio_bytes
+            wav_bytes
         )
 
         st.success(
@@ -128,19 +191,18 @@ if audio:
         )
 
 
-    except Exception:
+    except Exception as e:
 
         speech_emotion = "neutral"
 
         st.warning(
-            "Speech model error"
+            f"Speech model error: {e}"
         )
 
 
 else:
 
     speech_emotion = "neutral"
-
 
 
 
@@ -193,7 +255,6 @@ for _, row in questions.iterrows():
 
 
     score += value
-
 
 
 

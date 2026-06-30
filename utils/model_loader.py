@@ -36,6 +36,14 @@ speech_model_path = os.path.join(
 )
 
 
+speech_scaler_path = os.path.join(
+    BASE_DIR,
+    "models",
+    "encoders",
+    "speech_scaler.pkl"
+)
+
+
 
 # ===============================
 # Load Models
@@ -46,6 +54,11 @@ speech_model_path = os.path.join(
 
 speech_model = joblib.load(
     speech_model_path
+)
+
+
+speech_scaler = joblib.load(
+    speech_scaler_path
 )
 
 
@@ -261,6 +274,8 @@ def predict_speech(audio):
     )
 
     features = features.reshape(1, -1)
+
+    features = speech_scaler.transform(features)
 
     prediction = speech_model.predict(
         features
