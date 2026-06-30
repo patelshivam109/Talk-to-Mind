@@ -18,9 +18,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =========================================================
-#  GODMODE STYLE SYSTEM — "Neural Diagnostics Console"
-# =========================================================
+# -- Diagnostics Console --
+
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -387,7 +386,7 @@ if 'saved_to_history' not in st.session_state:
 # =========================================================
 with st.sidebar:
     st.markdown('<div class="tm-mast-title" style="font-size:22px; margin-bottom: 20px;">◈ Navigation</div>', unsafe_allow_html=True)
-    page = st.radio("Select View:", ["Assessment", "Dashboard"])
+    page = st.radio("Select View:", ["Assessment", "Dashboard", "System Architecture"])
     
     st.markdown("<hr>", unsafe_allow_html=True)
     if st.button("Restart Assessment"):
@@ -705,5 +704,52 @@ elif page == "Dashboard":
         st.info("Take the assessment to start tracking your progress over time!")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =========================
+# SYSTEM ARCHITECTURE
+# =========================
+elif page == "System Architecture":
+    st.markdown("""
+    <div class="tm-module">
+      <div class="tm-module-head">
+        <span class="tm-module-tag">INFO</span>
+        <span class="tm-module-title">System Architecture & Models</span>
+        <span class="tm-module-desc">MULTIMODAL WORKFLOW</span>
+      </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 🧠 Models Used")
+    st.markdown("""
+    - **Facial Emotion Model**: Convolutional Neural Network (CNN) architecture designed for robust real-time face detection and emotion classification.
+    - **Speech Emotion Model**: Support Vector Machine (SVM) classifier trained on extracted acoustic features including Mel-frequency cepstral coefficients (MFCCs).
+    - **Multimodal Fusion Engine**: Weighted Late-Fusion (Decision-Level Fusion) algorithm. It assigns specific confidence weights to the visual stream (30%), audio stream (30%), and subjective self-assessment (40%) to calculate a comprehensive Mental Well-Being Score.
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 📊 Workflow & Feature Engineering")
+    
+    st.markdown("#### Speech Audio Features")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.image("../reports/figures/sample_waveform.png", caption="Raw Audio Waveform")
+    with col2:
+        st.image("../reports/figures/sample_spectrogram.png", caption="Mel-Spectrogram")
+    with col3:
+        st.image("../reports/figures/sample_mfcc.png", caption="MFCC Feature Extraction")
+        
+    st.markdown("<br>#### Model Performance Metrics", unsafe_allow_html=True)
+    col4, col5 = st.columns(2)
+    with col4:
+        st.image("../reports/figures/facial_training_accuracy.png", caption="Facial Model: Training Accuracy")
+        st.image("../reports/figures/facial_training_loss.png", caption="Facial Model: Training Loss")
+        st.image("../reports/figures/facial_confusion_matrix.png", caption="Facial Model: Confusion Matrix")
+    with col5:
+        st.image("../reports/figures/speech_model_comparison.png", caption="Speech Model: Algorithm Comparison")
+        st.image("../reports/figures/speech_dataset_distribution.png", caption="Speech Model: Data Distribution")
+        st.image("../reports/figures/speech_confusion_matrix.png", caption="Speech Model: Confusion Matrix")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 st.markdown('<div class="tm-footer">TALK TO MIND · MULTIMODAL EMOTION FUSION SYSTEM</div>', unsafe_allow_html=True)
