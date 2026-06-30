@@ -4,7 +4,8 @@ numpy
 matplotlib
 plotly
 opencv-python
-tensorflow
+tensorflow==2.10.1
+keras==2.10.0
 scikit-learn
 librosa
 soundfile
