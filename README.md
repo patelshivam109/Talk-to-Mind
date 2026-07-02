@@ -254,7 +254,7 @@ pip install -r requirements.txt
 Open terminal
 
 ```bash
-cd app
+cd dashboard
 ```
 
 Run
